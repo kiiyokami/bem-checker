@@ -9,6 +9,23 @@ const fileListEl  = document.getElementById('file-list');
 const SKIP_DIRS = new Set(['node_modules', 'vendor']);
 const VALID_EXTS = new Set(['css', 'scss', 'sass', 'less', 'html', 'htm']);
 
+const COLOR_PROPS = new Set([
+  'color', 'background', 'background-color', 'border-color',
+  'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+  'outline', 'outline-color', 'box-shadow', 'text-shadow',
+  'fill', 'stroke', 'caret-color', 'text-decoration-color',
+]);
+
+const SPACING_PROPS = new Set([
+  'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+  'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+  'gap', 'row-gap', 'column-gap',
+  'font-size', 'line-height',
+  'border-radius', 'border-width',
+  'max-width', 'min-width', 'max-height', 'min-height',
+  'top', 'right', 'bottom', 'left',
+]);
+
 pickBtn.addEventListener('click', () => folderInput.click());
 
 folderInput.addEventListener('change', async () => {
@@ -79,20 +96,46 @@ async function run(files) {
   resultsEl.style.display = 'none';
   fileListEl.innerHTML = '';
 
-  const groups = [];
-  let total = 0;
-
+  // First pass: read all files and extract data
+  const fileData = [];
   for (const file of files) {
     const content = await file.read();
     const e = ext(file.path);
-    const pairs = e === 'html' || e === 'htm'
-      ? extractHTML(content)
-      : extractCSS(content);
+    const isCSS = !['html', 'htm'].includes(e);
+    fileData.push({
+      file,
+      isCSS,
+      classes: isCSS ? extractCSS(content) : extractHTML(content),
+      declarations: isCSS ? extractDeclarations(content) : [],
+    });
+  }
 
+  // Build global class name set for cross-file naming convention check
+  const allClassNames = new Set(fileData.flatMap(d => d.classes.map(([, cls]) => cls)));
+
+  // Second pass: check violations
+  const groups = [];
+  let total = 0;
+
+  for (const { file, classes, declarations } of fileData) {
     const violations = [];
-    for (const [line, cls] of pairs) {
+
+    for (const [line, cls] of classes) {
       for (const msg of checkBEM(cls)) {
-        violations.push({ line, cls, msg });
+        violations.push({ line, label: `.${cls}`, msg, type: 'bem' });
+        total++;
+      }
+      const ncMsg = checkNamingConvention(cls, allClassNames);
+      if (ncMsg) {
+        violations.push({ line, label: `.${cls}`, msg: ncMsg, type: 'convention' });
+        total++;
+      }
+    }
+
+    for (const [line, prop, value] of declarations) {
+      const msg = checkHardcoded(prop, value);
+      if (msg) {
+        violations.push({ line, label: `${prop}`, msg, type: 'hardcoded' });
         total++;
       }
     }
@@ -111,14 +154,29 @@ function render(groups, total, fileCount) {
   for (const { path, violations } of groups) {
     const div = document.createElement('div');
     div.className = 'file-group';
-    div.innerHTML = `<div class="file-path">${esc(path)}</div>` +
+    div.innerHTML =
+      `<button class="file-header" aria-expanded="true">
+         <span class="file-path">${esc(path)}</span>
+         <span class="file-count">${violations.length} error${violations.length === 1 ? '' : 's'}</span>
+         <span class="chevron">▾</span>
+       </button>
+       <div class="file-body">` +
       violations.map(v =>
-        `<div class="violation">
+        `<div class="violation violation--${v.type}">
            <span class="loc">:${v.line}</span>
-           <span class="cls">.${esc(v.cls)}</span>
+           <span class="cls">${esc(v.label)}</span>
            <span class="msg">${esc(v.msg)}</span>
          </div>`
-      ).join('');
+      ).join('') +
+      `</div>`;
+
+    div.querySelector('.file-header').addEventListener('click', function () {
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !expanded);
+      this.querySelector('.chevron').textContent = expanded ? '▸' : '▾';
+      div.querySelector('.file-body').style.display = expanded ? 'none' : 'block';
+    });
+
     fileListEl.appendChild(div);
   }
 
@@ -190,6 +248,38 @@ function extractHTML(content) {
   return results;
 }
 
+function extractDeclarations(content) {
+  const results = [];
+  const lines = content.split('\n');
+  let inComment = false;
+
+  for (let li = 0; li < lines.length; li++) {
+    let line = lines[li];
+
+    // Strip block comments
+    if (inComment) {
+      const end = line.indexOf('*/');
+      if (end === -1) continue;
+      line = line.slice(end + 2);
+      inComment = false;
+    }
+    const commentStart = line.indexOf('/*');
+    if (commentStart !== -1) {
+      const commentEnd = line.indexOf('*/', commentStart + 2);
+      if (commentEnd === -1) { inComment = true; line = line.slice(0, commentStart); }
+      else line = line.slice(0, commentStart) + line.slice(commentEnd + 2);
+    }
+
+    // Strip line comments
+    const lineComment = line.indexOf('//');
+    if (lineComment !== -1) line = line.slice(0, lineComment);
+
+    const match = line.match(/^\s*([\w-]+)\s*:\s*(.+?)\s*;?\s*$/);
+    if (match) results.push([li + 1, match[1], match[2].trim()]);
+  }
+  return results;
+}
+
 function isClassChar(c) { return /[a-zA-Z0-9\-_]/.test(c); }
 
 function checkBEM(cls) {
@@ -223,6 +313,46 @@ function checkSegment(part, ctx) {
     if (!/^[a-z][a-z0-9-]*$/.test(seg))
       return `invalid ${i === 0 ? ctx : 'modifier'} name '${seg}': must be lowercase letters, digits, or hyphens`;
   }
+  return null;
+}
+
+function checkNamingConvention(cls, allClassNames) {
+  if (cls.includes('__') || cls.includes('--')) return null;
+
+  const parts = cls.split('-');
+  if (parts.length < 2) return null;
+
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const base = parts.slice(0, i).join('-');
+    if (allClassNames.has(base)) {
+      const suffix = parts.slice(i).join('-');
+      return `possible modifier using single hyphen — consider .${base}--${suffix} (modifier) or .${base}__${suffix} (element)`;
+    }
+  }
+  return null;
+}
+
+const CSS_KEYWORDS = new Set([
+  'none', 'transparent', 'inherit', 'initial', 'unset', 'revert',
+  'auto', 'normal', 'currentcolor', '0',
+]);
+
+function checkHardcoded(prop, value) {
+  if (prop.startsWith('--')) return null;
+  if (value.includes('var(')) return null;
+  if (CSS_KEYWORDS.has(value.toLowerCase())) return null;
+  if (/^0(px|rem|em)$/.test(value)) return null;
+
+  if (COLOR_PROPS.has(prop)) {
+    if (/#[0-9a-fA-F]{3,8}/.test(value))     return `hardcoded color value — use a CSS variable`;
+    if (/rgba?\s*\(/.test(value))              return `hardcoded color value — use a CSS variable`;
+    if (/hsla?\s*\(/.test(value))              return `hardcoded color value — use a CSS variable`;
+  }
+
+  if (SPACING_PROPS.has(prop)) {
+    if (/\b\d+\.?\d*(px|rem|em)\b/.test(value)) return `hardcoded size value — use a CSS variable`;
+  }
+
   return null;
 }
 

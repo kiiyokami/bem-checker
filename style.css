@@ -86,14 +86,52 @@ h1 {
 .summary-info { color: #888; }
 
 .file-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.file-header {
+  width: 100%;
+  background: #141414;
+  border: 1px solid #222;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.file-header[aria-expanded="true"] {
+  border-radius: 6px 6px 0 0;
+  border-bottom-color: #1a1a1a;
 }
 
 .file-path {
   font-size: 0.78rem;
   color: #6c63ff;
-  margin-bottom: 0.5rem;
   font-family: monospace;
+  flex: 1;
+}
+
+.file-count {
+  font-size: 0.72rem;
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+.chevron {
+  font-size: 0.7rem;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.file-body {
+  border: 1px solid #222;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
 }
 
 .violation {
@@ -102,8 +140,10 @@ h1 {
   padding: 0.3rem 0.6rem;
   background: #1a1a1a;
   border-left: 2px solid #f87171;
-  border-radius: 0 4px 4px 0;
-  margin-bottom: 3px;
+  border-radius: 0;
+  margin-bottom: 0;
+  border-left-width: 2px;
+  border-bottom: 1px solid #1e1e1e;
   display: flex;
   gap: 1rem;
 }
@@ -111,6 +151,10 @@ h1 {
 .violation .loc  { color: #888; min-width: 3.5rem; flex-shrink: 0; }
 .violation .cls  { color: #a78bfa; }
 .violation .msg  { color: #d4d4d4; }
+
+.violation--bem        { border-left-color: #f87171; }
+.violation--convention { border-left-color: #fb923c; }
+.violation--hardcoded  { border-left-color: #fbbf24; }
 
 #about {
   margin-top: 3.5rem;
