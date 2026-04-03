@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BEM Checker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h1>BEM Checker</h1>
+
+  <div id="drop-zone">
+    <p>Drop your workspace folder here</p>
+    <button id="pick-btn">Choose folder</button>
+    <input type="file" id="folder-input" webkitdirectory multiple />
+  </div>
+
+  <div id="status"></div>
+
+  <section id="about">
+    <h2>What is BEM?</h2>
+    <p>BEM (Block Element Modifier) is a CSS naming convention that keeps styles modular and readable.</p>
+
+    <div class="bem-parts">
+      <div class="bem-part">
+        <span class="bem-label">Block</span>
+        <code>.card</code>
+        <p>A standalone component that makes sense on its own.</p>
+      </div>
+      <div class="bem-part">
+        <span class="bem-label">Element</span>
+        <code>.card__title</code>
+        <p>A part of a block, separated by double underscore.</p>
+      </div>
+      <div class="bem-part">
+        <span class="bem-label">Modifier</span>
+        <code>.card--featured</code>
+        <p>A variation of a block or element, separated by double hyphen.</p>
+      </div>
+    </div>
+
+    <div class="rules">
+      <h3>Rules this checker enforces</h3>
+      <ul>
+        <li>Class names must be lowercase</li>
+        <li>Only letters, digits, and hyphens — no single underscores</li>
+        <li>Elements and modifiers must have a block prefix</li>
+        <li>No nested elements &nbsp;<code>.block__el__sub</code></li>
+        <li>No element after a modifier &nbsp;<code>.block--mod__el</code></li>
+        <li>Each block or element can carry at most one modifier</li>
+      </ul>
+    </div>
+  </section>
+
+  <div id="results">
+    <div id="summary"></div>
+    <div id="file-list"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
