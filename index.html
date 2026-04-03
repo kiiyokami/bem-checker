@@ -43,6 +43,32 @@
     <div class="violation-types">
       <h3>Violation types</h3>
 
+      <div class="vtype vtype--a11y">
+        <span class="vtype-label">Accessibility</span>
+        <div class="vtype-body">
+          <p>CSS patterns that break keyboard navigation, screen readers, or general usability.</p>
+          <ul>
+            <li><code>outline: none/0</code> — removes the focus ring, making it impossible for keyboard users to see what element is focused</li>
+            <li><code>user-select: none</code> — prevents text selection; avoid on readable content like articles or labels</li>
+            <li><code>pointer-events: none</code> — blocks all mouse interaction; ensure a keyboard-accessible alternative is in place</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="vtype vtype--security">
+        <span class="vtype-label">Security</span>
+        <div class="vtype-body">
+          <p>CSS patterns that introduce security vulnerabilities or enable data exfiltration.</p>
+          <ul>
+            <li><code>javascript:</code> URIs — can execute JavaScript when the browser processes the URL</li>
+            <li><code>expression()</code> — evaluates arbitrary JavaScript in old IE, a known XSS vector</li>
+            <li><code>-moz-binding</code> — loads external XBL scripts in old Firefox, enabling code execution</li>
+            <li><code>behavior:</code> — loads HTC files in IE that can execute scripts</li>
+            <li>External <code>url(http://...)</code> — can leak document state or bypass Content Security Policy</li>
+          </ul>
+        </div>
+      </div>
+
       <div class="vtype vtype--bem">
         <span class="vtype-label">BEM</span>
         <div class="vtype-body">
@@ -92,6 +118,7 @@
             <li>High <code>z-index</code> values (&gt; 9) — arbitrary numbers create ordering conflicts; use a defined scale via CSS variables</li>
             <li>ID selectors <code>#foo</code> — higher specificity than classes, impossible to reuse, hard to override</li>
             <li><code>@import</code> — each import is loaded sequentially and blocks rendering; use <code>&lt;link&gt;</code> tags instead</li>
+            <li><code>transition: all</code> — animates every CSS property on change, causing unnecessary repaints; list only the properties you need</li>
           </ul>
         </div>
       </div>

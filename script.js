@@ -135,6 +135,10 @@ async function run(files) {
     }
 
     for (const [line, prop, value] of declarations) {
+      const aMsg = checkA11y(prop, value);
+      if (aMsg) { violations.push({ line, label: prop, msg: aMsg, type: 'a11y' }); total++; }
+      const sMsg = checkSecurity(prop, value);
+      if (sMsg) { violations.push({ line, label: prop, msg: sMsg, type: 'security' }); total++; }
       const hMsg = checkHardcoded(prop, value);
       if (hMsg) { violations.push({ line, label: prop, msg: hMsg, type: 'hardcoded' }); total++; }
       const qMsg = checkQuality(prop, value);
@@ -367,10 +371,27 @@ function checkHardcoded(prop, value) {
   return null;
 }
 
+function checkA11y(prop, value) {
+  if (prop === 'outline' && /^(none|0)$/.test(value.trim())) return `outline: ${value} removes the focus indicator — keyboard users cannot see what is focused`;
+  if (prop === 'user-select' && value.trim() === 'none')     return `user-select: none prevents text selection — avoid on readable content`;
+  if (prop === 'pointer-events' && value.trim() === 'none')  return `pointer-events: none blocks all mouse interaction — ensure a keyboard alternative exists`;
+  return null;
+}
+
+function checkSecurity(prop, value) {
+  if (/javascript\s*:/i.test(value))                          return `javascript: URI in CSS value — XSS vector`;
+  if (/expression\s*\(/i.test(value))                         return `CSS expression() executes JavaScript — major XSS risk`;
+  if (prop === '-moz-binding')                                 return `-moz-binding loads external XBL scripts — code execution risk`;
+  if (prop === 'behavior')                                     return `behavior: loads HTC files that execute scripts`;
+  if (/url\s*\(\s*['"]?\s*https?:\/\//i.test(value))          return `external URL in url() — risk of data exfiltration or CSP bypass`;
+  return null;
+}
+
 function checkQuality(prop, value) {
   if (value.includes('!important')) return `avoid !important — it breaks the cascade`;
   if (prop === 'float' && /^(left|right)$/.test(value)) return `avoid float layout — use flexbox or grid`;
   if (prop === 'z-index' && /^\d+$/.test(value) && parseInt(value) > 9) return `magic z-index value — use a CSS variable or a defined scale`;
+  if ((prop === 'transition' || prop === 'animation') && /\ball\b/.test(value)) return `transition: all animates every property — list only the properties you need`;
   return null;
 }
 

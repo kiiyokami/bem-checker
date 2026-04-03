@@ -152,6 +152,8 @@ h1 {
 .violation .cls  { color: #a78bfa; }
 .violation .msg  { color: #d4d4d4; }
 
+.violation--a11y       { border-left-color: #34d399; }
+.violation--security   { border-left-color: #f43f5e; }
 .violation--bem        { border-left-color: #f87171; }
 .violation--convention { border-left-color: #fb923c; }
 .violation--hardcoded  { border-left-color: #fbbf24; }
@@ -231,6 +233,8 @@ h1 {
   margin-bottom: 0.75rem;
 }
 
+.vtype--a11y       { border-left-color: #34d399; }
+.vtype--security   { border-left-color: #f43f5e; }
 .vtype--bem        { border-left-color: #f87171; }
 .vtype--convention { border-left-color: #fb923c; }
 .vtype--hardcoded  { border-left-color: #fbbf24; }
@@ -246,6 +250,8 @@ h1 {
   color: #888;
 }
 
+.vtype--a11y       .vtype-label { color: #34d399; }
+.vtype--security   .vtype-label { color: #f43f5e; }
 .vtype--bem        .vtype-label { color: #f87171; }
 .vtype--convention .vtype-label { color: #fb923c; }
 .vtype--hardcoded  .vtype-label { color: #fbbf24; }
