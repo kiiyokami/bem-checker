@@ -40,16 +40,61 @@
       </div>
     </div>
 
-    <div class="rules">
-      <h3>Rules this checker enforces</h3>
-      <ul>
-        <li>Class names must be lowercase</li>
-        <li>Only letters, digits, and hyphens — no single underscores</li>
-        <li>Elements and modifiers must have a block prefix</li>
-        <li>No nested elements &nbsp;<code>.block__el__sub</code></li>
-        <li>No element after a modifier &nbsp;<code>.block--mod__el</code></li>
-        <li>Each block or element can carry at most one modifier</li>
-      </ul>
+    <div class="violation-types">
+      <h3>Violation types</h3>
+
+      <div class="vtype vtype--bem">
+        <span class="vtype-label">BEM</span>
+        <div class="vtype-body">
+          <p>Structural BEM naming errors detected in class selectors and HTML class attributes.</p>
+          <ul>
+            <li>Class names must be lowercase</li>
+            <li>Only letters, digits, and hyphens — no underscores</li>
+            <li>Elements and modifiers must have a block prefix</li>
+            <li>No nested elements &nbsp;<code>.block__el__sub</code></li>
+            <li>No element after a modifier &nbsp;<code>.block--mod__el</code></li>
+            <li>Each block or element can carry at most one modifier</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="vtype vtype--convention">
+        <span class="vtype-label">Convention</span>
+        <div class="vtype-body">
+          <p>Classes that look like they should be BEM modifiers or elements but use a single hyphen instead.</p>
+          <ul>
+            <li><code>.badge</code> exists → <code>.badge-primary</code> is flagged</li>
+            <li>Suggestion: use <code>.badge--primary</code> (modifier) or <code>.badge__primary</code> (element)</li>
+            <li>Cross-file: checks all class names across the entire workspace</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="vtype vtype--hardcoded">
+        <span class="vtype-label">Hardcoded</span>
+        <div class="vtype-body">
+          <p>Raw color or size values that should be CSS variables for consistency and theming.</p>
+          <ul>
+            <li>Colors: hex <code>#ff0000</code>, <code>rgb()</code>, <code>rgba()</code>, <code>hsl()</code>, <code>hsla()</code></li>
+            <li>Sizes: pixel or relative lengths in margin, padding, gap, font-size, etc.</li>
+            <li>Exempt: <code>var()</code>, <code>0</code>, <code>none</code>, <code>transparent</code>, <code>inherit</code>, and other CSS keywords</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="vtype vtype--quality">
+        <span class="vtype-label">Quality</span>
+        <div class="vtype-body">
+          <p>General CSS anti-patterns that reduce maintainability or cause specificity issues.</p>
+          <ul>
+            <li><code>!important</code> — overrides the cascade, makes styles hard to debug or override</li>
+            <li><code>float: left/right</code> — designed for text wrapping, not layout; use flexbox or grid</li>
+            <li>High <code>z-index</code> values (&gt; 9) — arbitrary numbers create ordering conflicts; use a defined scale via CSS variables</li>
+            <li>ID selectors <code>#foo</code> — higher specificity than classes, impossible to reuse, hard to override</li>
+            <li><code>@import</code> — each import is loaded sequentially and blocks rendering; use <code>&lt;link&gt;</code> tags instead</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 

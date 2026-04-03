@@ -107,6 +107,8 @@ async function run(files) {
       isCSS,
       classes: isCSS ? extractCSS(content) : extractHTML(content),
       declarations: isCSS ? extractDeclarations(content) : [],
+      idSelectors: isCSS ? extractIDSelectors(content) : [],
+      atImports: isCSS ? extractAtImports(content) : [],
     });
   }
 
@@ -117,7 +119,7 @@ async function run(files) {
   const groups = [];
   let total = 0;
 
-  for (const { file, classes, declarations } of fileData) {
+  for (const { file, classes, declarations, idSelectors, atImports } of fileData) {
     const violations = [];
 
     for (const [line, cls] of classes) {
@@ -133,11 +135,20 @@ async function run(files) {
     }
 
     for (const [line, prop, value] of declarations) {
-      const msg = checkHardcoded(prop, value);
-      if (msg) {
-        violations.push({ line, label: `${prop}`, msg, type: 'hardcoded' });
-        total++;
-      }
+      const hMsg = checkHardcoded(prop, value);
+      if (hMsg) { violations.push({ line, label: prop, msg: hMsg, type: 'hardcoded' }); total++; }
+      const qMsg = checkQuality(prop, value);
+      if (qMsg) { violations.push({ line, label: prop, msg: qMsg, type: 'quality' }); total++; }
+    }
+
+    for (const [line, id] of idSelectors) {
+      violations.push({ line, label: `#${id}`, msg: 'ID selector — avoid for styling, use a class instead', type: 'quality' });
+      total++;
+    }
+
+    for (const line of atImports) {
+      violations.push({ line, label: '@import', msg: 'avoid @import — it blocks rendering, use <link> tags instead', type: 'quality' });
+      total++;
     }
 
     if (violations.length) groups.push({ path: file.path, violations });
@@ -354,6 +365,54 @@ function checkHardcoded(prop, value) {
   }
 
   return null;
+}
+
+function checkQuality(prop, value) {
+  if (value.includes('!important')) return `avoid !important — it breaks the cascade`;
+  if (prop === 'float' && /^(left|right)$/.test(value)) return `avoid float layout — use flexbox or grid`;
+  if (prop === 'z-index' && /^\d+$/.test(value) && parseInt(value) > 9) return `magic z-index value — use a CSS variable or a defined scale`;
+  return null;
+}
+
+function extractIDSelectors(content) {
+  const results = [];
+  const lines = content.split('\n');
+  let inComment = false;
+  let depth = 0;
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    let i = 0;
+    while (i < line.length) {
+      if (inComment) {
+        if (line[i] === '*' && line[i+1] === '/') { inComment = false; i += 2; }
+        else i++;
+        continue;
+      }
+      if (line[i] === '/' && line[i+1] === '*') { inComment = true; i += 2; continue; }
+      if (line[i] === '/' && line[i+1] === '/') break;
+      if (line[i] === '{') { depth++; i++; continue; }
+      if (line[i] === '}') { depth--; i++; continue; }
+      if (depth === 0 && line[i] === '#' && i + 1 < line.length && /[a-zA-Z_]/.test(line[i + 1])) {
+        i++;
+        const start = i;
+        while (i < line.length && isClassChar(line[i])) i++;
+        results.push([li + 1, line.slice(start, i)]);
+      } else {
+        i++;
+      }
+    }
+  }
+  return results;
+}
+
+function extractAtImports(content) {
+  const results = [];
+  const lines = content.split('\n');
+  for (let li = 0; li < lines.length; li++) {
+    if (/^\s*@import\b/.test(lines[li])) results.push(li + 1);
+  }
+  return results;
 }
 
 function ext(name) { return name.split('.').pop().toLowerCase(); }
